@@ -1,6 +1,6 @@
 #include <iostream>               
-#include <utility>                   
-#include <algorithm>
+//#include <utility>                   
+//#include <algorithm>
 #include <boost/config.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
@@ -9,7 +9,7 @@
 #include <boost/property_map/property_map.hpp>
 #include <random>
 
-#include <typeinfo>
+//#include <typeinfo>
 
 double delay(std::normal_distribution<double>& d, std::mt19937& gen) {
 	double temp = d(gen);
@@ -44,6 +44,8 @@ public:
 		G_delay = &d;
 		G_loss = &l;
 	}
+	
+	
 	double optimal_routes(int root)
 	{
 		if (root > boost::num_vertices(*G_delay))
@@ -70,23 +72,23 @@ public:
 
 		boost::dijkstra_shortest_paths(*G_loss, s, predecessor);
 
-		Graph delaySPT(boost::num_vertices(*G_loss)); //with losses as edge weight
+		Graph delay_SPT(boost::num_vertices(*G_loss)); //with losses as edge weight
 		for (int i = 0; i < parents_delay.size(); i++)
 		{
 			if (i == parents_delay[i]) { //parent vertex of the root vertex of Dijkstra is root vertex
 				continue;
 			}
-			add_edge(i, parents_delay[i], get(boost::edge_weight_t(), *G_loss, boost::edge(i, parents_delay[i], *G_loss).first), delaySPT);
+			add_edge(i, parents_delay[i], get(boost::edge_weight_t(), *G_loss, boost::edge(i, parents_delay[i], *G_loss).first), delay_SPT);
 		}
 
-		weightmap = get(boost::edge_weight, delaySPT);
-		std::vector< vertex_descriptor > parents_spt(num_vertices(delaySPT));
-		std::vector< double > distance_spt(num_vertices(delaySPT));
-		s = vertex(root, delaySPT);
-		predecessor = boost::predecessor_map(boost::make_iterator_property_map(parents_loss.begin(), get(boost::vertex_index, delaySPT))).distance_map(boost::make_iterator_property_map(
-			distance_loss.begin(), get(boost::vertex_index, delaySPT)));
+		weightmap = get(boost::edge_weight, delay_SPT);
+		std::vector< vertex_descriptor > parents_spt(num_vertices(delay_SPT));
+		std::vector< double > distance_spt(num_vertices(delay_SPT));
+		s = vertex(root, delay_SPT);
+		predecessor = boost::predecessor_map(boost::make_iterator_property_map(parents_loss.begin(), get(boost::vertex_index, delay_SPT))).distance_map(boost::make_iterator_property_map(
+			distance_loss.begin(), get(boost::vertex_index, delay_SPT)));
 		
-		boost::dijkstra_shortest_paths(delaySPT, s, predecessor);
+		boost::dijkstra_shortest_paths(delay_SPT, s, predecessor);
 
 		int optimal_routes_num = 0;
 		for (int i = 0; i < distance_spt.size(); i++)
@@ -96,10 +98,11 @@ public:
 			}
 		}
 		return double(optimal_routes_num) / boost::num_vertices(*G_loss);
+		//return optimal_routes_num;
 	}
 };
 
-void twoGridsConstructor(Graph& G_delay, Graph& G_loss, int N, std::vector<double>& losses, std::normal_distribution<double>& norm_d, std::discrete_distribution<>& discr_d)
+void two_grids_constructor(Graph& G_delay, Graph& G_loss, int N, std::vector<double>& losses, std::normal_distribution<double>& norm_d, std::discrete_distribution<>& discr_d)
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -125,7 +128,8 @@ void twoGridsConstructor(Graph& G_delay, Graph& G_loss, int N, std::vector<doubl
 int main()
 {
 	const int N = 32;
-	const int NUM_EXPERIMENTS = 30;
+	int NUM_EXPERIMENTS = 20;
+	//const double EPSILON = 0.05 / (N * N);
 	
 	std::vector<double> losses = { 0, 0.01, 0.02, 0.03, 0.04, 0.05 };
 	std::normal_distribution<double> norm_d {7.5, 1.25};
@@ -133,21 +137,40 @@ int main()
 
 
 	std::vector<double> optimal_routes_average(N);
-	for (int i = 0; i < NUM_EXPERIMENTS; i++)
+
+	time_t start, end;
+	time(&start);
+
+	for(int i = 0; i < NUM_EXPERIMENTS; i++)
 	{
+
 		Graph G_delay(N * N);
 		Graph G_loss(N * N);
-		twoGridsConstructor(G_delay, G_loss, N, losses, norm_d, discr_d);
+		
+		two_grids_constructor(G_delay, G_loss, N, losses, norm_d, discr_d);
+		
 		Solution S(G_delay, G_loss);
+		
 
 		for (int j = 0; j < N; j++)
-		{
+		{	
 			optimal_routes_average[j] += S.optimal_routes(j);
 		}
 	}
+
+	time(&end);
+	
 	for (int i = 0; i < N; i++)
 	{
 		std::cout << "average for vertex " << i << " : " << optimal_routes_average[i] / NUM_EXPERIMENTS << std::endl;
 	}
+	
+	double time_taken = double(end - start);
+	std::cout << "Time  : "
+		<< time_taken << " ";
+	std::cout << " sec " << std::endl;
+	
+	std::cout << "num exper = " << NUM_EXPERIMENTS << std::endl;
+	
 	return 0;
 }
