@@ -48,9 +48,6 @@ public:
 		G_delay = &d;
 		G_loss = &l;
 	}
-	~Solution() {
-
-	}
 
 	/*
 	* Firstly, I will calculate the shortest paths with delay and with loss as a metric,
